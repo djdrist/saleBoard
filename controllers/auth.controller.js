@@ -5,7 +5,6 @@ const getImageFileType = require('../utils/getImageFileType');
 
 exports.register = async (req, res) => {
 	try {
-		console.log(req.file);
 		const { login, password, phone } = req.body;
 		const fileType = req.file ? await getImageFileType(req.file) : 'unknown';
 		if (

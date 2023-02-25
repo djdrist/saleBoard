@@ -1,4 +1,7 @@
 const Ad = require('../models/ad.model');
+const fs = require('fs');
+const getImageFileType = require('../utils/getImageFileType');
+const User = require('../models/user.model');
 
 exports.getAllAds = async (req, res) => {
 	try {
@@ -10,7 +13,7 @@ exports.getAllAds = async (req, res) => {
 };
 exports.getAdById = async (req, res) => {
 	try {
-		const ad = await Ad.find({ id: req.params.id }).populate('seller', 'login phone avatar');
+		const ad = await Ad.findById(req.params.id).populate('seller', 'login phone avatar');
 		if (!ad) res.status(404).send({ message: 'Not found' });
 		else res.json(ad);
 	} catch (err) {
@@ -22,9 +25,10 @@ exports.postAd = async (req, res) => {
 		const fileType = req.file ? await getImageFileType(req.file) : 'unknown';
 		if (req.file && ['image/jpeg', 'image/png', 'image/gif'].includes(fileType)) {
 			const { title, description, price, location, seller } = req.body;
-			const newAd = new Ad({ title, description, price, photo: req.file.path, location, seller });
+			const sellerId = await User.findOne({ login: seller });
+			const newAd = new Ad({ title, description, price, photo: req.file.path, location, seller: sellerId.id });
 			await newAd.save();
-			res.json({ message: 'Ad created' });
+			res.status(201).json({ message: 'Ad created' });
 		} else {
 			fs.unlinkSync(req.file.path);
 			res.status(400).send({ message: 'Bad request' });
@@ -36,9 +40,9 @@ exports.postAd = async (req, res) => {
 };
 exports.deleteAd = async (req, res) => {
 	try {
-		const ad = await Ad.find({ id: req.params.id });
+		const ad = await Ad.findById(req.params.id);
 		if (ad) {
-			await Ad.deleteOne({ id: req.params.id });
+			await Ad.findByIdAndDelete(req.params.id);
 			res.json({ message: 'Ad deleted' });
 		} else res.status(404).send({ message: 'Not found' });
 	} catch (err) {
@@ -46,16 +50,16 @@ exports.deleteAd = async (req, res) => {
 	}
 };
 exports.editAd = async (req, res) => {
-	const { title, description, price, location, seller } = req.body;
+	const { title, description, price, location } = req.body;
 	try {
-		const ad = await Ad.find({ id: req.params.id });
+		const ad = await Ad.findById(req.params.id);
 		if (ad) {
-			await Ad.updateOne({ id: req.params.id }, { $set: { title, description, price, location, seller } });
+			await Ad.findByIdAndUpdate(req.params.id, { $set: { title, description, price, location } });
 			if (req.file) {
 				const fileType = req.file ? await getImageFileType(req.file) : 'unknown';
 				if (req.file && ['image/jpeg', 'image/png', 'image/gif'].includes(fileType)) {
 					fs.unlinkSync(ad.photo);
-					await Ad.updateOne({ id: req.params.id }, { $set: { photo: req.file.path } });
+					await Ad.findByIdAndUpdate(req.params.id, { $set: { photo: req.file.path } });
 				}
 			}
 			res.json({ message: 'Ad updated' });
@@ -73,6 +77,7 @@ exports.getAdsBySearch = async (req, res) => {
 		const search = req.params.searchPhrase;
 		const searchRegex = new RegExp(search, 'i');
 		const ads = await Ad.find({ title: { $regex: searchRegex } }).populate('seller', 'login phone avatar');
+		res.json(ads);
 	} catch (err) {
 		res.status(500).send({ message: err.message });
 	}

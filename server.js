@@ -14,15 +14,23 @@ const app = express();
 
 const server = app.listen(process.env.PORT || 8000);
 
-const dbURI = 'mongodb://localhost:27017/SaleBoard';
+const dbURI =
+	process.env.NODE_ENV === 'production'
+		? `mongodb+srv://drist:${process.env.DB_PASS}cluster0.k5pygoz.mongodb.net/SaleBoard?retryWrites=true&w=majority`
+		: 'mongodb://localhost:27017/SaleBoard';
+
 mongoose.connect(dbURI, { useNewUrlParser: true });
 
-app.use(helmet());
+app.use(
+	helmet({
+		crossOriginResourcePolicy: false,
+	})
+);
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(
 	session({
-		secret: process.env.secret,
+		secret: process.env.SECRET,
 		store: MongoStore.create(mongoose.connection),
 		resave: false,
 		saveUninitialized: false,
@@ -44,8 +52,8 @@ app.use('/api/ads', adsRoutes);
 app.use('/auth/user', usersRoutes);
 app.use('/auth', authRoutes);
 
-app.use(express.static(path.join(__dirname, '/client/build')));
 app.use(express.static(path.join(__dirname, '/public')));
+app.use(express.static(path.join(__dirname, '/client/build')));
 
 app.get('*', (req, res) => {
 	res.sendFile(path.join(__dirname, '/client/build/index.html'));
