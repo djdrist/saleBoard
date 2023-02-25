@@ -16,7 +16,7 @@ const server = app.listen(process.env.PORT || 8000);
 
 const dbURI =
 	process.env.NODE_ENV === 'production'
-		? `mongodb+srv://drist:${process.env.DB_PASS}cluster0.k5pygoz.mongodb.net/SaleBoard?retryWrites=true&w=majority`
+		? `mongodb+srv://drist:${process.env.DB_PASS}@cluster0.k5pygoz.mongodb.net/?retryWrites=true&w=majority`
 		: 'mongodb://localhost:27017/SaleBoard';
 
 mongoose.connect(dbURI, { useNewUrlParser: true });
